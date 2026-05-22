@@ -53,7 +53,7 @@ namespace DBObjectEditor.Application
             {
                 strObjeTuru = "Trigger";
 
-                ozelIstenenGuncellemeler += "- <YENI_KOLONLAR> içindeki alanları Trigger gövdesindeki 'INSERT INTO' kolon listesine ekle.\n";
+                ozelIstenenKurallar += "- EN ÖNEMLİ KURAL: DECLARE ile BEGIN arasındaki 'CREATED BY' vb. bilgi blokları dahil olmak üzere, kodun içindeki /* ... */ veya -- ile yazılmış MEVCUT HİÇBİR YORUM SATIRINI SİLME. Yorumlar birebir korunmalıdır.\n"; ozelIstenenGuncellemeler += "- <YENI_KOLONLAR> içindeki alanları Trigger gövdesindeki 'INSERT INTO' kolon listesine ekle.\n";
                 ozelIstenenGuncellemeler += "- VALUES kısmına bu kolonları eklerken, mevcut koddaki prefix kullanımını (örneğin loglama için :OLD.KOLON_ADI veya :NEW.KOLON_ADI) birebir devam ettir.\n";
                 ozelIstenenGuncellemeler += "- DİKKAT: INSERT INTO ve VALUES bloklarındaki sıralamanın birbiriyle BİREBİR eşleştiğinden emin ol.\n";
                 ozelIstenenGuncellemeler += "- KRİTİK: Eğer VALUES listesinin sonunda sistemsel/sabit atamalar varsa, yeni kolonları kesinlikle en sona DEĞİL, tablodan gelen kolonların bittiği yere, yani sabit değerlerden hemen önceye ekle.\n";
@@ -82,7 +82,7 @@ namespace DBObjectEditor.Application
 
                 if (objeTuru == ObjectTypes.List)
                 {
-                    ozelIstenenGuncellemeler += "- Yeni eklenen IN parametrelerini içerideki ana sorgunun WHERE koşuluna (yapıyı bozmadan, örn: AND KOLON = P_PARAM) mutlaka dahil et.\n";
+                    ozelIstenenGuncellemeler += "- Yeni eklenen IN parametrelerinin hepsini içerideki ana sorgunun WHERE koşuluna (yapıyı bozmadan, null veya 0 kontrolleriyle birlikte, örn: AND KOLON = P_PARAM) mutlaka dahil et.\n";
                 }
 
                 ozelIstenenGuncellemeler += "- <YENI_PARAMETRELER> içindeki parametreleri Stored Procedure (SP)'nin imza (signature) kısmına uygun veri tipleriyle ekle.\n";
@@ -99,7 +99,8 @@ namespace DBObjectEditor.Application
             - Sadece istenen parametre ve kolon eklemelerini yap.
             - KRİTİK: <YENI_PARAMETRELER> ve <YENI_KOLONLAR> listelerindeki '[HEDEF_KONUM: ...]' talimatlarını SADECE ilgili alanı nereye ekleyeceğini bulmak için kullan.
             - YASAK: Bu 'HEDEF_KONUM' talimatlarını veya herhangi bir yönlendirme notunu SP/Trigger içine YORUM SATIRI (--) OLARAK ASLA YAZMA! Ürettiğin koda önceden var olmayan hiçbir açıklama metni veya yorum ekleme.
-            - KORUMA KURALI: Yeni eklemeleri yaptığın yerler HARİCİNDE KALAN tüm MEVCUT_KOD gövdesini BİREBİR KORU. Eklemeler dışında kodun yapısını 'güzelleştirmeye' çalışma.
+            - KORUMA KURALI (ÇOK KRİTİK): Yeni eklemeleri yaptığın yerler HARİCİNDE KALAN tüm MEVCUT_KOD gövdesini, BOŞLUKLAR VE MEVCUT YORUM BLOKLARI (/* ... */) DAHİL OLMAK ÜZERE BİREBİR KORU. Kodun yapısını veya yorumlarını temizlemeye/güzelleştirmeye ÇALIŞMA.
+            - YASAK: Ürettiğin koda ÖNCEDEN VAR OLMAYAN yeni bir açıklama veya yorum (--) ASLA EKLEME. (Ancak MEVCUT yorumları KESİNLİKLE SİLME!)
             - Selamlama, onay, açıklama KESİNLİKLE YAZMA. Markdown formatı KESİNLİKLE KULLANMA.
             - Scriptin en sonuna derleme için '/' karakterini ekle.
             {ozelIstenenKurallar}

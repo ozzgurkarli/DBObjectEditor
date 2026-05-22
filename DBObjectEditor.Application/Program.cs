@@ -26,6 +26,11 @@ namespace DBObjectEditor.Application
         {
             #region config
 
+            System.Net.ServicePointManager.SecurityProtocol =
+            System.Net.SecurityProtocolType.Tls12 |
+            System.Net.SecurityProtocolType.Tls11 |
+            System.Net.SecurityProtocolType.Tls;
+
             var builder = new ConfigurationBuilder()
             .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
             .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
@@ -97,7 +102,8 @@ namespace DBObjectEditor.Application
                                 InParametreler = eskiAnaliz.InParametreler,
                                 OutSutunlar = eskiAnaliz.OutSutunlar
                             });
-                            yeniAnalizler.Add(new SPAnalizSonuc {
+                            yeniAnalizler.Add(new SPAnalizSonuc
+                            {
                                 MetodAd = yeniAnaliz.MetodAd,
                                 SPAd = spAdUpdateTrigger,
                                 ObjeTuru = Helper.AyarlaObjeTuru(spAdUpdateTrigger),
@@ -131,14 +137,16 @@ namespace DBObjectEditor.Application
                             var eklenenParametreler = yeniMetot.InParametreler.Except(eskiMetot.InParametreler).ToList();
                             var eklenenKolonlar = yeniMetot.OutSutunlar.Except(eskiMetot.OutSutunlar).ToList();
 
-                            var siraliEklenenParametreler = eklenenParametreler.Select(p => {
+                            var siraliEklenenParametreler = eklenenParametreler.Select(p =>
+                            {
                                 int index = yeniMetot.InParametreler.IndexOf(p);
                                 return index > 0
                                     ? $"{p} [HEDEF_KONUM: {yeniMetot.InParametreler[index - 1]} parametresinden hemen sonra]"
                                     : $"{p} [HEDEF_KONUM: İlk sıraya]";
                             }).ToList();
 
-                            var siraliEklenenKolonlar = eklenenKolonlar.Select(k => {
+                            var siraliEklenenKolonlar = eklenenKolonlar.Select(k =>
+                            {
                                 int index = yeniMetot.OutSutunlar.IndexOf(k);
                                 return index > 0
                                     ? $"{k} [HEDEF_KONUM: {yeniMetot.OutSutunlar[index - 1]} kolonundan hemen sonra]"
@@ -154,8 +162,8 @@ namespace DBObjectEditor.Application
                                     config["Settings:SelectedModel"],
                                     yeniMetot.SPAd,
                                     mevcutSpKodu,
-                                    siraliEklenenParametreler, 
-                                    siraliEklenenKolonlar,  
+                                    siraliEklenenParametreler,
+                                    siraliEklenenKolonlar,
                                     yeniMetot.ObjeTuru));
                             }
                         }
