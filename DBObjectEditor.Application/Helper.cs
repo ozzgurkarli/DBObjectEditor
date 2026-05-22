@@ -53,52 +53,39 @@ namespace DBObjectEditor.Application
             {
                 strObjeTuru = "Trigger";
 
-                ozelIstenenGuncellemeler = string.Concat(ozelIstenenGuncellemeler,
-                    "- <YENI_KOLONLAR> içindeki alanları Trigger gövdesindeki 'INSERT INTO' kolon listesine ekle.\n");
-
-                ozelIstenenGuncellemeler = string.Concat(ozelIstenenGuncellemeler,
-                    "- VALUES kısmına bu kolonları eklerken, mevcut koddaki prefix kullanımını (örneğin loglama için :OLD.KOLON_ADI veya :NEW.KOLON_ADI) birebir devam ettir.\n");
-
-                ozelIstenenGuncellemeler = string.Concat(ozelIstenenGuncellemeler,
-                    "- DİKKAT: INSERT INTO ve VALUES bloklarındaki sıralamanın birbiriyle BİREBİR eşleştiğinden emin ol.\n");
-
-                ozelIstenenGuncellemeler = string.Concat(ozelIstenenGuncellemeler,
-                    "- KRİTİK: Eğer VALUES listesinin sonunda sistemsel/sabit atamalar (Örn: APP_CALLERINFORMATION, APP_DATE(), 1 vb.) varsa, yeni kolonları kesinlikle en sona DEĞİL, tablodan gelen kolonların bittiği yere, yani sabit değerlerden hemen önceye ekle.\n");
+                ozelIstenenGuncellemeler += "- <YENI_KOLONLAR> içindeki alanları Trigger gövdesindeki 'INSERT INTO' kolon listesine ekle.\n";
+                ozelIstenenGuncellemeler += "- VALUES kısmına bu kolonları eklerken, mevcut koddaki prefix kullanımını (örneğin loglama için :OLD.KOLON_ADI veya :NEW.KOLON_ADI) birebir devam ettir.\n";
+                ozelIstenenGuncellemeler += "- DİKKAT: INSERT INTO ve VALUES bloklarındaki sıralamanın birbiriyle BİREBİR eşleştiğinden emin ol.\n";
+                ozelIstenenGuncellemeler += "- KRİTİK: Eğer VALUES listesinin sonunda sistemsel/sabit atamalar varsa, yeni kolonları kesinlikle en sona DEĞİL, tablodan gelen kolonların bittiği yere, yani sabit değerlerden hemen önceye ekle.\n";
             }
             else
             {
                 strObjeTuru = "Stored Procedure (SP)";
 
-                if (objeTuru == ObjectTypes.Insert) // Kendi enum/sabit tipinize göre ayarlayın
+                if (objeTuru == ObjectTypes.Insert)
                 {
-                    ozelIstenenGuncellemeler = string.Concat(ozelIstenenGuncellemeler, "- <YENI_KOLONLAR> içindeki alanları, gövdedeki 'INSERT INTO' komutunun kolon listesine (parantez içine) ekle.\n");
-                    ozelIstenenGuncellemeler = string.Concat(ozelIstenenGuncellemeler, "- Eklediğin bu yeni kolonlara karşılık gelen parametreleri, 'INSERT INTO' daki sırayı BİREBİR koruyarak 'VALUES' komutunun listesine ekle.\n");
-                    ozelIstenenGuncellemeler = string.Concat(ozelIstenenGuncellemeler, "- DİKKAT: INSERT INTO içindeki kolon sırası ile VALUES içindeki parametre sırası kesinlikle birbiriyle eşleşmeli ve yapısal bütünlük bozulmamalıdır.\n");
+                    ozelIstenenGuncellemeler += "- <YENI_KOLONLAR> içindeki alanları, gövdedeki 'INSERT INTO' komutunun kolon listesine (parantez içine) ekle.\n";
+                    ozelIstenenGuncellemeler += "- Eklediğin bu yeni kolonlara karşılık gelen parametreleri, 'INSERT INTO' daki sırayı BİREBİR koruyarak 'VALUES' komutunun listesine ekle.\n";
+                    ozelIstenenGuncellemeler += "- DİKKAT: INSERT INTO içindeki kolon sırası ile VALUES içindeki parametre sırası kesinlikle birbiriyle eşleşmeli ve yapısal bütünlük bozulmamalıdır.\n";
                 }
-                else if (objeTuru == ObjectTypes.Update) // Kendi enum/sabit tipinize göre ayarlayın
+                else if (objeTuru == ObjectTypes.Update)
                 {
-                    ozelIstenenGuncellemeler = string.Concat(ozelIstenenGuncellemeler, "- <YENI_KOLONLAR> içindeki alanları, gövdedeki 'UPDATE' komutunun 'SET' bloğuna ekle.\n");
-
-                    ozelIstenenGuncellemeler = string.Concat(ozelIstenenGuncellemeler, "- Eklenen her bir yeni kolon için, <YENI_PARAMETRELER> içindeki ilgili parametreyi eşleştirerek atamasını yap (Örn: KOLON_ADI = p_PARAMETRE_ADI).\n");
-
-                    ozelIstenenGuncellemeler = string.Concat(ozelIstenenGuncellemeler, "- DİKKAT: 'SET' bloğunun en sonuna yeni alanları eklerken, bir önceki mevcut satırın sonuna virgül (,) koymayı KESİNLİKLE unutma. Sentaks hatası olmamalıdır.\n");
-
-                    ozelIstenenGuncellemeler = string.Concat(ozelIstenenGuncellemeler, "- DİKKAT: Mevcut 'SET' atamalarındaki boşluk/hizalama (indentation) yapısını yeni eklediğin kolonlar için de BİREBİR koru.\n");
-
-                    ozelIstenenGuncellemeler = string.Concat(ozelIstenenGuncellemeler, "- KRİTİK: 'UPDATE' komutunun 'WHERE' koşullarına kesinlikle dokunma, sadece 'SET' kısmını güncelle.\n");
+                    ozelIstenenGuncellemeler += "- DİKKAT: Bu bir UPDATE prosedürüdür. Gövdedeki 'UPDATE [TABLO_ADI] SET ...' bloğunu bul.\n";
+                    ozelIstenenGuncellemeler += "- GÖREV: <YENI_KOLONLAR> listesindeki her bir kolonu, <YENI_PARAMETRELER> listesindeki karşılığı ile eşleştirerek (Örn: YENI_KOLON = p_YENI_PARAMETRE) SET bloğuna MUTLAKA YAZ.\n";
+                    ozelIstenenGuncellemeler += "- DİKKAT: 'SET' bloğuna yeni alanları eklerken, bir önceki satırın sonuna virgül (,) koymayı KESİNLİKLE unutma.\n";
+                    ozelIstenenGuncellemeler += "- KRİTİK İSTİSNA: Aşağıdaki 'MEVCUT_KODU BİREBİR KORU' kuralı, UPDATE komutunun SET bloğuna yapacağın bu eklemeler için GEÇERLİ DEĞİLDİR. SET bloğunu yeni kolonları içerecek şekilde güvenle değiştirebilirsin.\n";
                 }
                 else
                 {
-                    ozelIstenenGuncellemeler = string.Concat(ozelIstenenGuncellemeler, "- <YENI_KOLONLAR> içindeki alanları SP içindeki ilgili SELECT sorgularına/OUT imlasına ekle.\n");
-
+                    ozelIstenenGuncellemeler += "- <YENI_KOLONLAR> içindeki alanları SP içindeki ilgili SELECT sorgularına/OUT imlasına ekle.\n";
                 }
 
                 if (objeTuru == ObjectTypes.List)
                 {
-                    ozelIstenenGuncellemeler = "- Yeni eklenen IN parametrelerini içerideki ana sorgunun WHERE koşuluna (yapıyı bozmadan, örn: AND KOLON = P_PARAM) mutlaka dahil et.\n";
+                    ozelIstenenGuncellemeler += "- Yeni eklenen IN parametrelerini içerideki ana sorgunun WHERE koşuluna (yapıyı bozmadan, örn: AND KOLON = P_PARAM) mutlaka dahil et.\n";
                 }
 
-                ozelIstenenGuncellemeler = string.Concat(ozelIstenenGuncellemeler, "- <YENI_PARAMETRELER> içindeki parametreleri Stored Procedure (SP)'nin imza (signature) kısmına uygun veri tipleriyle ekle.\n");
+                ozelIstenenGuncellemeler += "- <YENI_PARAMETRELER> içindeki parametreleri Stored Procedure (SP)'nin imza (signature) kısmına uygun veri tipleriyle ekle.\n";
             }
 
             string prompt = $@"GÖREV:
@@ -108,23 +95,24 @@ namespace DBObjectEditor.Application
             {ozelIstenenGuncellemeler}
 
             KATI FORMAT KURALLARI (BUNLARA KESİNLİKLE UYULACAK):
-            - Scriptin Oracle'da doğrudan derlenebilir ve commitlenebilir olması için gerekli olan DDL komutlarını (örneğin mevcut değilse 'CREATE OR REPLACE PROCEDURE ...', 'ALTER ...' vb.) kodun en başına mutlaka ekle.
+            - Scriptin Oracle'da doğrudan derlenebilir ve commitlenebilir olması için gerekli olan DDL komutlarını (Örn: CREATE OR REPLACE PROCEDURE ...) kodun en başına mutlaka ekle.
             - Sadece istenen parametre ve kolon eklemelerini yap.
-            - MEVCUT_KOD'un gövdesini (boşluklar, alt satıra geçişler, büyük/küçük harf kullanımı, mevcut yorum satırları dahil) BİREBİR KORU.
-            - Kodun yapısını 'güzelleştirmeye' çalışma, ilgisiz satır düzeltmeleri veya formatlama (indentation) KESİNLİKLE YAPMA.
-            - Selamlama, onay, açıklama KESİNLİKLE YAZMA.Markdown formatı KESİNLİKLE KULLANMA.
-            -Scriptin en sonuna derleme için '/' karakterini ekle.
+            - KRİTİK: <YENI_PARAMETRELER> ve <YENI_KOLONLAR> listelerindeki '[HEDEF_KONUM: ...]' talimatlarını SADECE ilgili alanı nereye ekleyeceğini bulmak için kullan.
+            - YASAK: Bu 'HEDEF_KONUM' talimatlarını veya herhangi bir yönlendirme notunu SP/Trigger içine YORUM SATIRI (--) OLARAK ASLA YAZMA! Ürettiğin koda önceden var olmayan hiçbir açıklama metni veya yorum ekleme.
+            - KORUMA KURALI: Yeni eklemeleri yaptığın yerler HARİCİNDE KALAN tüm MEVCUT_KOD gövdesini BİREBİR KORU. Eklemeler dışında kodun yapısını 'güzelleştirmeye' çalışma.
+            - Selamlama, onay, açıklama KESİNLİKLE YAZMA. Markdown formatı KESİNLİKLE KULLANMA.
+            - Scriptin en sonuna derleme için '/' karakterini ekle.
             {ozelIstenenKurallar}
 
             GİRDİLER:
             <{strObjeTuru}_ADI>{spAd}</{strObjeTuru}_ADI>
 
             <YENI_PARAMETRELER>
-            {string.Join(", ", eklenenParametreler)}
+            {string.Join("\n", eklenenParametreler)}
             </YENI_PARAMETRELER>
 
             <YENI_KOLONLAR>
-            {string.Join(", ", eklenenKolonlar)}
+            {string.Join("\n", eklenenKolonlar)}
             </YENI_KOLONLAR>
 
             <MEVCUT_KOD>
@@ -254,7 +242,7 @@ namespace DBObjectEditor.Application
 
         public static ObjectTypes AyarlaObjeTuru(string SPAd)
         {
-            switch(SPAd.Substring(4, 1))
+            switch (SPAd.Substring(4, 1))
             {
                 case "I":
                     return ObjectTypes.Insert;

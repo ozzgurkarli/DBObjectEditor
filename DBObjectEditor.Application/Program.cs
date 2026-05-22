@@ -131,10 +131,32 @@ namespace DBObjectEditor.Application
                             var eklenenParametreler = yeniMetot.InParametreler.Except(eskiMetot.InParametreler).ToList();
                             var eklenenKolonlar = yeniMetot.OutSutunlar.Except(eskiMetot.OutSutunlar).ToList();
 
+                            var siraliEklenenParametreler = eklenenParametreler.Select(p => {
+                                int index = yeniMetot.InParametreler.IndexOf(p);
+                                return index > 0
+                                    ? $"{p} [HEDEF_KONUM: {yeniMetot.InParametreler[index - 1]} parametresinden hemen sonra]"
+                                    : $"{p} [HEDEF_KONUM: İlk sıraya]";
+                            }).ToList();
+
+                            var siraliEklenenKolonlar = eklenenKolonlar.Select(k => {
+                                int index = yeniMetot.OutSutunlar.IndexOf(k);
+                                return index > 0
+                                    ? $"{k} [HEDEF_KONUM: {yeniMetot.OutSutunlar[index - 1]} kolonundan hemen sonra]"
+                                    : $"{k} [HEDEF_KONUM: İlk sıraya]";
+                            }).ToList();
+
                             if (eklenenParametreler.Any() || eklenenKolonlar.Any())
                             {
                                 string mevcutSpKodu = Oracle.OracleMevcutSpGetir(config["Settings:OracleConnectionString"], yeniMetot.SPAd);
-                                aiTasks.Add(Helper.UretVeModeleCevirAsync(config["Settings:CopilotApiKey"], config["Settings:SelectedModel"], yeniMetot.SPAd, mevcutSpKodu, eklenenParametreler, eklenenKolonlar, yeniMetot.ObjeTuru));
+
+                                aiTasks.Add(Helper.UretVeModeleCevirAsync(
+                                    config["Settings:CopilotApiKey"],
+                                    config["Settings:SelectedModel"],
+                                    yeniMetot.SPAd,
+                                    mevcutSpKodu,
+                                    siraliEklenenParametreler, 
+                                    siraliEklenenKolonlar,  
+                                    yeniMetot.ObjeTuru));
                             }
                         }
                     }
