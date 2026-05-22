@@ -1,0 +1,28 @@
+# Visual Studio yerel ayarları ve önbellek dosyaları (Görseldeki gizli klasör)
+.vs/
+
+# Derleme çıktıları (Projelerin içinde oluşacak)
+[Bb]in/
+[Oo]bj/
+
+# NuGet Paketleri (Görseldeki packages klasörü)
+packages/
+*.nupkg
+
+# Kullanıcıya özel proje ayarları
+*.user
+*.suo
+*.sln.docstates
+
+# Geçici dosyalar ve loglar
+*.log
+[Dd]ebug/
+[Rr]elease/
+
+# Eğer ReSharper veya Rider kullanılıyorsa
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+.idea/
+
+DBObjectEditor.Application/appsettings.json
