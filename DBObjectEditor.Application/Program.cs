@@ -44,15 +44,15 @@ namespace DBObjectEditor.Application
             {
                 #region debug mode
 
-                Console.WriteLine($"[DEBUG] Process ID: {Process.GetCurrentProcess().Id} - SpAutoModifier");
-                Console.WriteLine("[DEBUG] Visual Studio'dan 'Attach' bekleniyor...");
+                //Console.WriteLine($"[DEBUG] Process ID: {Process.GetCurrentProcess().Id} - SpAutoModifier");
+                //Console.WriteLine("[DEBUG] Visual Studio'dan 'Attach' bekleniyor...");
 
-                while (!Debugger.IsAttached)
-                {
-                    Thread.Sleep(1000);
-                }
+                //while (!Debugger.IsAttached)
+                //{
+                //    Thread.Sleep(1000);
+                //}
 
-                Debugger.Break();
+                //Debugger.Break();
 
                 #endregion debug mode
 
@@ -210,8 +210,8 @@ namespace DBObjectEditor.Application
                     }
                 }
 
-                //return 0;
-                return 1;
+                return 0;
+                //return 1;
             }
             catch (Exception ex)
             {

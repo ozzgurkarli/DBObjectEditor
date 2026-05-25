@@ -71,9 +71,13 @@ namespace DBObjectEditor.Application
                 else if (objeTuru == ObjectTypes.Update)
                 {
                     ozelIstenenGuncellemeler += "- DİKKAT: Bu bir UPDATE prosedürüdür. Gövdedeki 'UPDATE [TABLO_ADI] SET ...' bloğunu bul.\n";
-                    ozelIstenenGuncellemeler += "- GÖREV: <YENI_KOLONLAR> listesindeki her bir kolonu, <YENI_PARAMETRELER> listesindeki karşılığı ile eşleştirerek (Örn: YENI_KOLON = p_YENI_PARAMETRE) SET bloğuna MUTLAKA YAZ.\n";
+                    ozelIstenenGuncellemeler += "- GÖREV: <YENI_KOLONLAR> listesindeki her bir kolonu, <YENI_PARAMETRELER> listesindeki karşılığı ile eşleştirerek (Örn: YENI_KOLON = p_YENI_PARAMETRE) SET bloğuna MUTLAKA YAZ. SET bloğuna ekleme yapmayı KESİNLİKLE ATLAMA.\n";
                     ozelIstenenGuncellemeler += "- DİKKAT: 'SET' bloğuna yeni alanları eklerken, bir önceki satırın sonuna virgül (,) koymayı KESİNLİKLE unutma.\n";
                     ozelIstenenGuncellemeler += "- KRİTİK İSTİSNA: Aşağıdaki 'MEVCUT_KODU BİREBİR KORU' kuralı, UPDATE komutunun SET bloğuna yapacağın bu eklemeler için GEÇERLİ DEĞİLDİR. SET bloğunu yeni kolonları içerecek şekilde güvenle değiştirebilirsin.\n";
+                }
+                else if (objeTuru == ObjectTypes.Select)
+                {
+                    ozelIstenenGuncellemeler += "- KRİTİK İSTİSNA: SELECT bloğunda halihazırda '*' ile tablodan dönen tüm veriler döndürülüyorsa KESİNLİKLE DEĞİŞTİRME.\n";
                 }
                 else
                 {
@@ -226,8 +230,16 @@ namespace DBObjectEditor.Application
                 }
 
                 var rowAccesses = method.DescendantNodes()
-                    .OfType<ElementAccessExpressionSyntax>()
-                    .Where(ea => ea.Expression is IdentifierNameSyntax id && id.Identifier.Text == "row");
+                .OfType<ElementAccessExpressionSyntax>()
+                .Where(ea =>
+                    (ea.Expression is IdentifierNameSyntax id && id.Identifier.Text == "row")
+                    ||
+                    (ea.Expression is ElementAccessExpressionSyntax innerEa
+                        && innerEa.Expression is MemberAccessExpressionSyntax memberAccess
+                        && memberAccess.Expression is IdentifierNameSyntax tableId
+                        && tableId.Identifier.Text == "table"
+                        && memberAccess.Name.Identifier.Text == "Rows")
+                );
 
                 result.OutSutunlar = rowAccesses
                     .Select(ea => (ea.ArgumentList.Arguments[0].Expression as LiteralExpressionSyntax)?.Token.ValueText)
