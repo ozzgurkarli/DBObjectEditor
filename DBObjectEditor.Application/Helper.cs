@@ -1,14 +1,16 @@
-﻿using Microsoft.CodeAnalysis.CSharp;
+﻿using DBObjectEditor.Common.DTO;
+using DBObjectEditor.Common.Enum;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using DBObjectEditor.Common.DTO;
 using System.Net.Http;
-using Newtonsoft.Json.Linq;
-using DBObjectEditor.Common.Enum;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using static System.Runtime.CompilerServices.RuntimeHelpers;
 
 namespace DBObjectEditor.Application
 {
@@ -48,72 +50,90 @@ namespace DBObjectEditor.Application
             string strObjeTuru = string.Empty;
             string ozelIstenenGuncellemeler = string.Empty;
             string ozelIstenenKurallar = string.Empty;
+            string tipeOzelKurallar = string.Empty;
+
+            var formatliParametreler = eklenenParametreler.Select(p =>
+            {
+                string temizParam = p.Trim();
+                if (!temizParam.StartsWith("p_", StringComparison.OrdinalIgnoreCase))
+                {
+                    temizParam = "p_" + temizParam;
+                }
+                return temizParam
+                    .Replace("ı", "I")
+                    .Replace("i", "I")
+                    .Replace("ş", "S")
+                    .Replace("ğ", "G")
+                    .Replace("ü", "U")
+                    .Replace("ö", "O")
+                    .Replace("ç", "C")
+                    .ToUpperInvariant();
+            }).ToList();
 
             if (objeTuru == ObjectTypes.TriggerUpdate || objeTuru == ObjectTypes.TriggerDelete)
             {
                 strObjeTuru = "Trigger";
-
-                ozelIstenenKurallar += "- EN ÖNEMLİ KURAL: DECLARE ile BEGIN arasındaki 'CREATED BY' vb. bilgi blokları dahil olmak üzere, kodun içindeki /* ... */ veya -- ile yazılmış MEVCUT HİÇBİR YORUM SATIRINI SİLME. Yorumlar birebir korunmalıdır.\n"; ozelIstenenGuncellemeler += "- <YENI_KOLONLAR> içindeki alanları Trigger gövdesindeki 'INSERT INTO' kolon listesine ekle.\n";
-                ozelIstenenGuncellemeler += "- VALUES kısmına bu kolonları eklerken, mevcut koddaki prefix kullanımını (örneğin loglama için :OLD.KOLON_ADI veya :NEW.KOLON_ADI) birebir devam ettir.\n";
-                ozelIstenenGuncellemeler += "- DİKKAT: INSERT INTO ve VALUES bloklarındaki sıralamanın birbiriyle BİREBİR eşleştiğinden emin ol.\n";
-                ozelIstenenGuncellemeler += "- KRİTİK: Eğer VALUES listesinin sonunda sistemsel/sabit atamalar varsa, yeni kolonları kesinlikle en sona DEĞİL, tablodan gelen kolonların bittiği yere, yani sabit değerlerden hemen önceye ekle.\n";
+                tipeOzelKurallar = @"
+                - HEDEF 1: Koddaki 'INSERT INTO [TABLO_ADI]_H' bloğunu bul. SADECE <YENI_KOLONLAR> listesindeki alanları bu parantezin içindeki listeye ekle. (DİKKAT: Kolon isimlerinin başına KESİNLİKLE 'p_' veya 'P_' öneki EKLEME!)
+                - HEDEF 2: 'VALUES' bloğunu bul. Eklediğin kolonların karşılıklarını ':OLD.KOLON_ADI' formatında VALUES parantezinin içine ekle. (Örnek Hatalı Kullanım: :OLD.P_TESTDOSYAADI -> YASAK. Örnek Doğru Kullanım: :OLD.TESTDOSYAADI -> ZORUNLU).
+                - YASAK 1: Trigger'larda dışarıdan parametre olmaz. Bu yüzden <YENI_PARAMETRELER> listesini KESİNLİKLE DİKKATE ALMA ve koda hiçbir parametre ekleme.
+                - YASAK 2: Trigger'ın DECLARE, BEGIN veya diğer mantıksal bloklarına KESİNLİKLE DOKUNMA.";
             }
-            else
+            else if (objeTuru == ObjectTypes.Update)
             {
-                strObjeTuru = "Stored Procedure (SP)";
-
-                if (objeTuru == ObjectTypes.Insert)
-                {
-                    ozelIstenenGuncellemeler += "- <YENI_KOLONLAR> içindeki alanları, gövdedeki 'INSERT INTO' komutunun kolon listesine (parantez içine) ekle.\n";
-                    ozelIstenenGuncellemeler += "- Eklediğin bu yeni kolonlara karşılık gelen parametreleri, 'INSERT INTO' daki sırayı BİREBİR koruyarak 'VALUES' komutunun listesine ekle.\n";
-                    ozelIstenenGuncellemeler += "- DİKKAT: INSERT INTO içindeki kolon sırası ile VALUES içindeki parametre sırası kesinlikle birbiriyle eşleşmeli ve yapısal bütünlük bozulmamalıdır.\n";
-                }
-                else if (objeTuru == ObjectTypes.Update)
-                {
-                    ozelIstenenGuncellemeler += "- DİKKAT: Bu bir UPDATE prosedürüdür. Gövdedeki 'UPDATE [TABLO_ADI] SET ...' bloğunu bul.\n";
-                    ozelIstenenGuncellemeler += "- GÖREV: <YENI_KOLONLAR> listesindeki her bir kolonu, <YENI_PARAMETRELER> listesindeki karşılığı ile eşleştirerek (Örn: YENI_KOLON = p_YENI_PARAMETRE) SET bloğuna MUTLAKA YAZ. SET bloğuna ekleme yapmayı KESİNLİKLE ATLAMA.\n";
-                    ozelIstenenGuncellemeler += "- DİKKAT: 'SET' bloğuna yeni alanları eklerken, bir önceki satırın sonuna virgül (,) koymayı KESİNLİKLE unutma.\n";
-                    ozelIstenenGuncellemeler += "- KRİTİK İSTİSNA: Aşağıdaki 'MEVCUT_KODU BİREBİR KORU' kuralı, UPDATE komutunun SET bloğuna yapacağın bu eklemeler için GEÇERLİ DEĞİLDİR. SET bloğunu yeni kolonları içerecek şekilde güvenle değiştirebilirsin.\n";
-                }
-                else if (objeTuru == ObjectTypes.Select)
-                {
-                    ozelIstenenGuncellemeler += "- KRİTİK İSTİSNA: SELECT bloğunda halihazırda '*' ile tablodan dönen tüm veriler döndürülüyorsa KESİNLİKLE DEĞİŞTİRME.\n";
-                }
-                else
-                {
-                    ozelIstenenGuncellemeler += "- <YENI_KOLONLAR> içindeki alanları SP içindeki ilgili SELECT sorgularına/OUT imlasına ekle.\n";
-                }
-
-                if (objeTuru == ObjectTypes.List)
-                {
-                    ozelIstenenGuncellemeler += "- Yeni eklenen IN parametrelerinin hepsini içerideki ana sorgunun WHERE koşuluna (yapıyı bozmadan, null veya 0 kontrolleriyle birlikte, örn: AND KOLON = P_PARAM) mutlaka dahil et.\n";
-                }
-
-                ozelIstenenGuncellemeler += "- <YENI_PARAMETRELER> içindeki parametreleri Stored Procedure (SP)'nin imza (signature) kısmına uygun veri tipleriyle ekle.\n";
+                strObjeTuru = "Update Stored Procedure";
+                tipeOzelKurallar = @"
+                - HEDEF 1: <YENI_PARAMETRELER>'i SP imza (signature) kısmına ekle.
+                - HEDEF 2: Koddaki 'UPDATE [TABLO_ADI] SET' bloğunu bul.
+                - HEDEF 3: <YENI_KOLONLAR>'ı <YENI_PARAMETRELER> ile eşleştir (Örn: KOLON = p_PARAM). Bu eşleşmeleri SET bloğundaki MEVCUT ATAMALARIN EN SONUNA, 'WHERE' komutundan hemen önceye ekle.
+                - KURAL: Eklediğin ilk alanın başına veya mevcut son satırın sonuna virgül (,) koymayı unutma.";
+            }
+            else if (objeTuru == ObjectTypes.Insert)
+            {
+                strObjeTuru = "Insert Stored Procedure";
+                tipeOzelKurallar = @"
+                - HEDEF 1: <YENI_PARAMETRELER>'i SP imza (signature) kısmına ekle.
+                - HEDEF 2: Koddaki 'INSERT INTO [TABLO_ADI]' parantezi içindeki kolon listesinin EN SONUNA <YENI_KOLONLAR>'ı ekle.
+                - HEDEF 3: 'VALUES' parantezi içindeki listenin EN SONUNA <YENI_PARAMETRELER>'i ekle.
+                - KURAL: Kolon sırası ile parametre sırasının birebir eşleştiğinden emin ol.";
+            }
+            else if (objeTuru == ObjectTypes.List)
+            {
+                strObjeTuru = "List (Dynamic Query) Stored Procedure";
+                tipeOzelKurallar = @"
+                - HEDEF 1: <YENI_PARAMETRELER>'i SP imza kısmına ekle.
+                - HEDEF 2: Koddaki dinamik sorgu metnini (v_Query := 'SELECT ...') bul. <YENI_KOLONLAR>'ı FROM'dan hemen önce SELECT listesine ekle.
+                - HEDEF 3: Eğer yeni parametreler varsa, bunları IF(p_PARAM IS NOT NULL) mantığıyla MEVCUT KODDAKİ gibi WHERE bloğuna dinamik olarak ekle.
+                - YASAK: Tek tırnak (') kullanımında mevcut yapıyı bozma.";
+            }
+            else if (objeTuru == ObjectTypes.Select)
+            {
+                strObjeTuru = "Select Stored Procedure";
+                tipeOzelKurallar = @"
+                - HEDEF 1: <YENI_PARAMETRELER>'i SP imza kısmına ekle (Eğer yeni arama parametresi istenmişse).
+                - HEDEF 2: Koddaki 'OPEN p_RC FOR SELECT' bloğunu bul. <YENI_KOLONLAR>'ı FROM'dan hemen önce SELECT listesine ekle.
+                - YASAK: Eğer SELECT * kullanılıyorsa kolon eklemeye çalışma, dokunma.";
             }
 
-            string prompt = $@"GÖREV:
-            Sen uzman bir Oracle PL/SQL geliştiricisisin. Aşağıda verilen mevcut {strObjeTuru}, belirtilen girdilere göre güncelleyip yeniden oluşturman gerekiyor.
+            string evrenselKurallar = @"
+            - SENİN ROLÜN: Sen bir 'Kod Birleştirici (Text Merger)' motorusun. Amacın yeni alanları mevcut koda, mevcut dokuyu ZERRE KADAR bozmadan enjekte etmektir.
+            - YORUM YASAĞI (ÇOK KRİTİK): Ürettiğin koda KESİNLİKLE yeni bir yorum satırı (--, /*...*/) EKLEME. '-- yeni eklendi', '-- added here' gibi açıklamalar YASAKTIR.
+            - MEVCUT YORUMLARI KORUMA: Koddaki mevcut /* CREATED BY ... */, /* DESCRIPTION ... */ veya diğer tüm yorum blokları SİLİNMEYECEK, birebir bırakılacak.
+            - YAPISAL KORUMA: Eklemeleri yaptığın yerler hariç, kodun geri kalanındaki boşlukları (indentation), satır atlamalarını ve casing (büyük/küçük harf) yapısını BİREBİR KORU. Kodu formatlamaya veya güzelleştirmeye çalışma.
+            - ÇIKTI FORMATI: Sadece ve sadece derlenebilir PL/SQL kodunu ver. Kod bloğu haricinde 'İşte kodunuz', 'Başarıyla güncellendi' gibi hiçbir selamlama veya onay cümlesi YAZMA.
+            - BİTİŞ KURALI: Scriptin en sonuna tek başına '/' karakterini mutlaka koy.";
 
-            İSTENEN GÜNCELLEMELER:
-            {ozelIstenenGuncellemeler}
+            string prompt = $@"
+            Aşağıdaki {strObjeTuru} objesi için belirtilen eklemeleri yap.
 
-            KATI FORMAT KURALLARI (BUNLARA KESİNLİKLE UYULACAK):
-            - Scriptin Oracle'da doğrudan derlenebilir ve commitlenebilir olması için gerekli olan DDL komutlarını (Örn: CREATE OR REPLACE PROCEDURE ...) kodun en başına mutlaka ekle.
-            - Sadece istenen parametre ve kolon eklemelerini yap.
-            - KRİTİK: <YENI_PARAMETRELER> ve <YENI_KOLONLAR> listelerindeki '[HEDEF_KONUM: ...]' talimatlarını SADECE ilgili alanı nereye ekleyeceğini bulmak için kullan.
-            - YASAK: Bu 'HEDEF_KONUM' talimatlarını veya herhangi bir yönlendirme notunu SP/Trigger içine YORUM SATIRI (--) OLARAK ASLA YAZMA! Ürettiğin koda önceden var olmayan hiçbir açıklama metni veya yorum ekleme.
-            - KORUMA KURALI (ÇOK KRİTİK): Yeni eklemeleri yaptığın yerler HARİCİNDE KALAN tüm MEVCUT_KOD gövdesini, BOŞLUKLAR VE MEVCUT YORUM BLOKLARI (/* ... */) DAHİL OLMAK ÜZERE BİREBİR KORU. Kodun yapısını veya yorumlarını temizlemeye/güzelleştirmeye ÇALIŞMA.
-            - YASAK: Ürettiğin koda ÖNCEDEN VAR OLMAYAN yeni bir açıklama veya yorum (--) ASLA EKLEME. (Ancak MEVCUT yorumları KESİNLİKLE SİLME!)
-            - Selamlama, onay, açıklama KESİNLİKLE YAZMA. Markdown formatı KESİNLİKLE KULLANMA.
-            - Scriptin en sonuna derleme için '/' karakterini ekle.
-            {ozelIstenenKurallar}
+            [EVRENSEL KURALLAR]
+            {evrenselKurallar}
 
-            GİRDİLER:
-            <{strObjeTuru}_ADI>{spAd}</{strObjeTuru}_ADI>
+            [TİPE ÖZEL ENJEKSİYON HEDEFLERİ]
+            {tipeOzelKurallar}
 
             <YENI_PARAMETRELER>
-            {string.Join("\n", eklenenParametreler)}
+            {string.Join("\n", formatliParametreler)}
             </YENI_PARAMETRELER>
 
             <YENI_KOLONLAR>
@@ -122,9 +142,7 @@ namespace DBObjectEditor.Application
 
             <MEVCUT_KOD>
             {mevcutSpKodu}
-            </MEVCUT_KOD>
-
-            <!-- REQ_ID: {Guid.NewGuid()} -->";
+            </MEVCUT_KOD>";
 
             var request = new HttpRequestMessage(HttpMethod.Post, "chat/completions");
             request.Headers.Add("Authorization", $"Bearer {apiKey}");
@@ -170,14 +188,26 @@ namespace DBObjectEditor.Application
         {
             if (string.IsNullOrWhiteSpace(hamSql)) return hamSql;
 
-            // 1. Markdown etiketlerini temizle
-            string temiz = hamSql.Replace("```sql", "").Replace("```SQL", "").Replace("```", "");
+            // 1. Markdown etiketlerini Regex ile TEK SEFERDE ve KÖKTEN temizle.
+            // @"```(?i)[a-z]*" -> 3 backtick ile başlayan ve ardından gelen tüm harfleri (sql, plsql, oracle vb.) siler.
+            string temiz = Regex.Replace(hamSql, @"```(?i)[a-z]*", "");
             temiz = temiz.Trim();
 
-            // 2. En sondaki "/" işaretini temizle (Oracle.ManagedDataAccess sondaki slash'i sevmez)
+            // 2. Bir önceki hatadan veya AI'dan ötürü en başta 'plsql', 'sql' gibi kelimeler kaldıysa onları da uçur.
+            // ^(?i)(plsql|sql|oracle)\s+ -> En baştaki kelimeleri büyük/küçük harf duyarsız arar.
+            temiz = Regex.Replace(temiz, @"^(?i)(plsql|sql|oracle)\s+", "");
+            temiz = temiz.Trim();
+
+            // 3. Sondaki execute '/' karakterini uçur.
             if (temiz.EndsWith("/"))
             {
                 temiz = temiz.Substring(0, temiz.Length - 1).Trim();
+            }
+
+            // 4. DDL Başlığı Kontrolü
+            if (!temiz.StartsWith("CREATE", StringComparison.OrdinalIgnoreCase))
+            {
+                temiz = "CREATE OR REPLACE " + temiz;
             }
 
             return temiz;

@@ -36,7 +36,7 @@ namespace DBObjectEditor.Application
             .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
             IConfiguration config = builder.Build();
 
-            OracleConfiguration.TnsAdmin = @"D:\oracle\product\19.0.0\client_1\network\admin";
+            OracleConfiguration.TnsAdmin = config["Settings:tnsnamesPath"];
 
             #endregion config
 
@@ -61,6 +61,11 @@ namespace DBObjectEditor.Application
 
                 using (var repo = new Repository(repoYolu))
                 {
+                    if (repo.Head.FriendlyName.ToLower().Contains("release/"))  // release branch
+                    {
+                        return 0;
+                    }
+
                     var yeniCommit = repo.Head.Tip;
                     var eskiCommit = yeniCommit.Parents.FirstOrDefault();
 
